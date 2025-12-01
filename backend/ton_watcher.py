@@ -1,7 +1,7 @@
 import os
 import asyncio
 # שורה מתוקנת: השתמש בספרייה שהתקנו ב-requirements.txt
-from pytonapi import TonApi
+from pytonapi import Tonapi
 # הוספנו את זה כדי להתחבר ל-API
 # from ton import TonlibClient # ייתכן שתצטרך ספריית SDK מודרנית יותר, זהו שלד
 
