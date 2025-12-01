@@ -1,6 +1,6 @@
 fastapi
 uvicorn
-python-telegram-bot==20.9
-asyncpg # לחיבור ל-PostgreSQL של Railway
+python-telegram-bot>=21.0
+asyncpg
 pydantic
 python-ton
