@@ -4,13 +4,10 @@ import os
 import asyncio
 # ייבוא חדש ל-pytonlib
 from pytonlib import TonlibClient 
+# שינוי נתיב הייבוא של Address. נשתמש בנתיב המקובל:
+from pytonlib.address import Address
 
-# pytonlib משתמשת בקבצי קונפיגורציה, לא רק ב-API Key
-# נשתמש ב-Client ישיר ונחבר אותו ל-FastAPI
-# נצטרך גם את הספריות לכתובות
-from pytonlib.utils.address import Address
-
-TON_API_KEY = os.environ.get("TON_API_KEY") 
+TON_API_KEY = os.environ.get("TON_API_KEY")
 TON_TESTNET_ENDPOINT = os.environ.get("TON_TESTNET_ENDPOINT", "https://testnet.toncenter.com/api/v2/jsonRPC")
 GAME_WALLET_ADDRESS = os.environ.get("GAME_WALLET_ADDRESS")
 
