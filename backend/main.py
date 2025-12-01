@@ -4,6 +4,5 @@ from telegram_handler import app  # מייבא את FastAPI app מהקובץ tel
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
-# זהו קובץ ה־entrypoint של האפליקציה
-# Railway יריץ את זה עם הפקודה:
+# Railway יריץ את זה עם:
 # uvicorn main:app --host 0.0.0.0 --port 8000
