@@ -1,11 +1,9 @@
-# ton_watcher.py
-
+# ton_watcher.py (כך הוא צריך להיראות בראשו)
 import os
 import asyncio
-# ייבוא חדש ל-pytonlib
 from pytonlib import TonlibClient 
-# שינוי נתיב הייבוא של Address. נשתמש בנתיב המקובל:
-from pytonlib.address import Address
+from pytonlib.address import Address # זה התיקון הקריטי
+# ...
 
 TON_API_KEY = os.environ.get("TON_API_KEY")
 TON_TESTNET_ENDPOINT = os.environ.get("TON_TESTNET_ENDPOINT", "https://testnet.toncenter.com/api/v2/jsonRPC")
