@@ -1,7 +1,7 @@
 import os
 import asyncio
 # הייבוא הנכון: האות i קטנה (Tonapi)
-from pytonapi import Tonapi 
+from pytonapi.client import Tonapi
 # זה עדיין נשאר בתור שלד, אבל נשתמש ב-Tonapi כעת
 
 TON_API_KEY = os.environ.get("TON_API_KEY")
