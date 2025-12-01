@@ -1,6 +1,6 @@
 fastapi
 uvicorn
-python-telegram-bot>=21.0
-asyncpg
-pydantic
+python-dotenv
 pytonlib
+tonapi
+asyncio
