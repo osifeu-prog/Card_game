@@ -1,7 +1,6 @@
 import asyncio
 import os
 import logging
-from pytonlib.utils.address import Address
 from pytonlib.utils.numbers import from_nano
 from pytonapi import Tonapi
 from dotenv import load_dotenv
