@@ -1,9 +1,8 @@
 import os
 import asyncio
-# שורה מתוקנת: השתמש בספרייה שהתקנו ב-requirements.txt
-from pytonapi import Tonapi
-# הוספנו את זה כדי להתחבר ל-API
-# from ton import TonlibClient # ייתכן שתצטרך ספריית SDK מודרנית יותר, זהו שלד
+# הייבוא הנכון: האות i קטנה (Tonapi)
+from pytonapi import Tonapi 
+# זה עדיין נשאר בתור שלד, אבל נשתמש ב-Tonapi כעת
 
 TON_API_KEY = os.environ.get("TON_API_KEY")
 TON_TESTNET_ENDPOINT = os.environ.get("TON_TESTNET_ENDPOINT")
@@ -14,30 +13,27 @@ async def monitor_ton_payments():
     
     if not TON_API_KEY or not GAME_WALLET_ADDRESS:
         print("TON Watcher: חסרים משתני סביבה. הניטור מושעה.")
-        return # עצור אם חסרים מפתחות
+        return 
 
     # איתחול ה-API של TON
-    tonapi = TonApi(api_key=TON_API_KEY, is_testnet=True)
+    # השתמש ב-is_testnet=True ובכתובת ה-endpoint שסיפקת
+    tonapi = Tonapi(api_key=TON_API_KEY, is_testnet=True, url=TON_TESTNET_ENDPOINT)
     
     print("TON Watcher: מתחיל ניטור טרנזקציות בכתובת המשחק...")
     
     while True:
         try:
-            # TODO 4: קריאה ל-API
-            
-            # **דוגמה קצרה לניטור**
-            # זה יציג את הטרנזקציות האחרונות לכתובת שלך:
+            # בדיקה פשוטה של ה-API
             transactions = await tonapi.blockchain.get_account_transactions(
                 account=GAME_WALLET_ADDRESS, limit=10
             )
+            print(f"בדיקת {len(transactions)} טרנזקציות אחרונות בכתובת: {GAME_WALLET_ADDRESS}")
 
-            # הדפסה לבדיקה:
-            # print(f"בדיקת {len(transactions)} טרנזקציות אחרונות...")
-
-            # ... כאן נכנסת לוגיקת האימות (TODO 5)
+            # ... כאן תתבצע לוגיקת האימות (TODO 5)
             
             await asyncio.sleep(10) # בדיקה כל 10 שניות
             
         except Exception as e:
+            # שגיאת API או שגיאת חיבור
             print(f"TON Watcher Error: {e}")
             await asyncio.sleep(60)
