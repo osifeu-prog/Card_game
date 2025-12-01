@@ -4,4 +4,4 @@ python-dotenv
 pytonlib
 tonapi
 asyncio
-psycopg2-binary   # חיבור ל-Postgres
+psycopg2-binary
