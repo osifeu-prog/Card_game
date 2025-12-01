@@ -4,3 +4,4 @@ python-dotenv
 pytonlib
 tonapi
 asyncio
+python-telegram-bot
