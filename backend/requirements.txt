@@ -3,4 +3,4 @@ uvicorn
 python-telegram-bot>=21.0
 asyncpg
 pydantic
-pytonapi
+aiotonsdk
