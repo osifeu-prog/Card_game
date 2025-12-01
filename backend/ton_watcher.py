@@ -1,6 +1,6 @@
 import os
 import asyncio
-# הייבוא הנכון: האות i קטנה (Tonapi)
+# הייבוא הנכון, ככל הנראה (השתמש ב-T גדולה)
 from pytonapi import Tonapi
 # זה עדיין נשאר בתור שלד, אבל נשתמש ב-Tonapi כעת
 
