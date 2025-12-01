@@ -1,4 +1,3 @@
-# backend/main.py
 import logging
 from telegram_handler import app  # מייבא את FastAPI app מהקובץ telegram_handler
 
