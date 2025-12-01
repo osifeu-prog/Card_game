@@ -1,4 +1,3 @@
-# backend/telegram_handler.py
 import os
 import logging
 from typing import Optional
@@ -6,8 +5,10 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
-from pytonlib import Address
+# ייבוא מתוקן של Address
+from pytonlib.utils.address import Address
 from pytonlib.utils.numbers import from_nano
+
 from ton_watcher import monitor_ton_payments
 
 # Load environment variables
