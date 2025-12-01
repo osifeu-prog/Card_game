@@ -4,4 +4,4 @@ python-dotenv
 pytonlib
 tonapi
 asyncio
-python-telegram-bot
+psycopg2-binary   # חיבור ל-Postgres
