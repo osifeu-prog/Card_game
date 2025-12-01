@@ -3,4 +3,4 @@ uvicorn
 python-telegram-bot>=21.0
 asyncpg
 pydantic
-python-ton
+pytonapi  # החלפנו את python-ton ב-pytonapi
