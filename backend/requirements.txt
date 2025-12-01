@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+python-telegram-bot==20.9
+asyncpg # לחיבור ל-PostgreSQL של Railway
+pydantic
+python-ton
