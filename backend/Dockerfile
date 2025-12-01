@@ -1,20 +1,18 @@
-# Dockerfile
-# משתמשים בגרסת buster המלאה יותר שכוללת את כלי הקומפילציה (כמו gcc)
-FROM python:3.11-buster
+# backend/Dockerfile
+FROM python:3.11-slim
 
-# הגדרת משתני סביבה סטנדרטיים ל-Python
-ENV PYTHONUNBUFFERED 1
-ENV PYTHONDONTWRITEBYTECODE 1
+# התקנת תלותים בסיסיים
+RUN apt-get update && apt-get install -y build-essential libpq-dev && rm -rf /var/lib/apt/lists/*
 
-# הגדרת ספריית העבודה
+# יצירת תיקיית עבודה
 WORKDIR /app
 
-# העתק את קובץ התלויות והתקן אותן
+# התקנת ספריות
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# העתק את כל שאר קבצי הפרויקט
+# העתקת הקוד
 COPY . .
 
-# הגדרת הפקודה להרצת השרת באמצעות Uvicorn
+# הפקודה להרצה
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
