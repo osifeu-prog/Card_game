@@ -5,8 +5,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
-# ייבוא מתוקן של Address
-from pytonlib.utils.address import Address
+# אין צורך ב-Address
 from pytonlib.utils.numbers import from_nano
 
 from ton_watcher import monitor_ton_payments
