@@ -1,4 +1,6 @@
 from fastapi import FastAPI, Request, HTTPException
+# 🚨 תיקון קריטי: ייבוא Update
+from telegram import Update
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler
 from telegram_handler import start_command, button_callback, debug_id_command
 from ton_watcher import monitor_ton_payments
@@ -17,11 +19,12 @@ if not TELEGRAM_BOT_TOKEN:
     # מונע קריסה אם ה-TOKEN לא מוגדר
     raise ValueError("TELEGRAM_BOT_TOKEN must be set in environment variables.")
 
+# בונה את אובייקט היישום של הבוט
 application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
 
 # הוספת ה-Handlers
 application.add_handler(CommandHandler("start", start_command))
-application.add_handler(CommandHandler("getid", debug_id_command)) 
+application.add_handler(CommandHandler("getid", debug_id_command)) # פקודת הדיבוג החדשה
 application.add_handler(CallbackQueryHandler(button_callback)) 
 
 
@@ -53,6 +56,7 @@ async def telegram_webhook(request: Request):
         raise HTTPException(status_code=500, detail="Telegram bot not initialized.")
         
     # קבלת ה-Update והעברתו ללוגיקה של python-telegram-bot
+    # זה דורש ש-telegram.Update ייוצא בראש הקובץ
     update = Update.de_json(await request.json(), application.bot)
     await application.process_update(update)
     return {"message": "OK"}
