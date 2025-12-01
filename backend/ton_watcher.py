@@ -1,8 +1,7 @@
-# backend/ton_watcher.py
 import asyncio
 import os
 import logging
-from pytonlib import Address
+from pytonlib.utils.address import Address
 from pytonlib.utils.numbers import from_nano
 from pytonapi import Tonapi
 from dotenv import load_dotenv
