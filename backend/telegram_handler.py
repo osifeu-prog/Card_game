@@ -1,16 +1,17 @@
 import os
 import logging
+from typing import Optional
 from fastapi import FastAPI, Request, HTTPException
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
-# התיקון הקריטי, בהנחה שזהו מקור השגיאה בקובץ זה:
-# במקום 'from pytonlib.address import Address'
+# התיקון הקריטי מבעיית pytonlib הקודמת:
 from pytonlib import Address 
 from pytonlib.utils.numbers import from_nano
 
-# יבוא פנימי של לוגיקת TON (בהנחה ש-main.py מייבא את זה)
-from .ton_watcher import monitor_ton_payments
+# עדכון ייבוא פנימי: שינוי מייבוא יחסי לייבוא ישיר
+# (מניעת שגיאות 'Attempted relative import with no known parent package')
+from ton_watcher import monitor_ton_payments
 
 # Load environment variables
 load_dotenv()
@@ -53,12 +54,7 @@ def handle_message(message: dict):
             # Since this is a FastAPI handler, we don't block the event loop
             # The actual monitoring should happen in a background task, 
             # but we can call the core logic here for demonstration purposes.
-            # In production, this would queue a job for a worker process.
 
-            # NOTE: We can't await an async function inside a sync handler easily,
-            # so for a simple webhook, this part needs careful design (e.g., background tasks).
-            # For now, we simulate the instruction given to the user.
-            
             payment_address = GAME_WALLET_ADDRESS
             payment_amount = from_nano(int(required_amount * 10**9), 9)
 
