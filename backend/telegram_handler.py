@@ -33,18 +33,15 @@ class TelegramUpdate(BaseModel):
     callback_query: Optional[dict] = None
 
 def send_message(chat_id: int, text: str):
-    """
-    שולח הודעה חזרה ל-Telegram API עם דיבוג מלא
-    """
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     payload = {"chat_id": chat_id, "text": text}
-    logging.debug(f"Preparing to send message: {payload}")
+    logging.debug(f"Sending payload: {payload}")
     try:
         r = requests.post(url, json=payload)
         logging.info(f"Sent message to {chat_id}: {text} (status {r.status_code})")
         logging.debug(f"Telegram response: {r.text}")
     except Exception as e:
-        logging.error(f"Failed to send message: {e}")
+        logging.exception("Failed to send message")
 
 def handle_message(message: dict):
     chat_id = message["chat"]["id"]
@@ -99,7 +96,6 @@ async def telegram_webhook(update: TelegramUpdate):
         logging.exception("Error handling Telegram update")
         return {"status": "error", "message": str(e)}
 
-    # תמיד מחזיר תשובה ל-Telegram כדי שלא יראה "Application failed to respond"
     logging.debug("Webhook processed successfully, returning OK")
     return {"status": "ok"}
 
