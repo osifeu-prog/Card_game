@@ -1,9 +1,16 @@
-# railway.toml - Config as Code for Railway
 [build]
-builder = "RAILPACK"
+# הגדרות בנייה (אם נדרשות)
 
 [deploy]
-startCommand = "uvicorn main:app --host 0.0.0.0 --port $PORT --log-level debug"
+# פקודת ההתחלה המפורשת
+startCommand = "uvicorn main:app --host 0.0.0.0 --port ${PORT}"
+
+# הגדרת בדיקת הבריאות (Healthcheck)
 healthcheckPath = "/"
-healthcheckTimeout = 100
-restartPolicyType = "always"
+healthcheckTimeout = "5s"
+healthcheckInterval = "10s"
+healthcheckRetries = 3
+
+# הגדרת פורט (ברירת מחדל 8080)
+# ה-PORT בפועל מגיע ממשתני הסביבה ש-Railway מגדיר
+# אבל כדאי לוודא שהוא מוגדר כראוי
