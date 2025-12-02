@@ -1,7 +1,7 @@
 import asyncio
+import os
 import logging
 from dotenv import load_dotenv
-import os
 
 # פונקציה מקומית במקום pytonlib
 def from_nano(amount: int, decimals: int = 9) -> float:
@@ -13,11 +13,11 @@ GAME_WALLET_ADDRESS = os.getenv("GAME_WALLET_ADDRESS")
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
-# פונקציה מדומה – במקום pytonapi
+# פונקציה מדומה – כרגע תמיד מחזירה הצלחה
 async def check_payment(address: str, amount_nano: int) -> bool:
     logging.info(f"Stub check_payment called for address={address}, amount={amount_nano}")
-    # כאן אפשר להוסיף לוגיקה אמיתית בעתיד
-    return True  # כרגע תמיד מחזיר הצלחה
+    # כאן אפשר להוסיף לוגיקה אמיתית מול TON בעתיד
+    return True
 
 async def monitor_ton_payments(user_id: int, required_ton_amount: float):
     required_nano_amount = int(required_ton_amount * 10**9)
