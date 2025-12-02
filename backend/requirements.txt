@@ -4,3 +4,4 @@ python-dotenv
 asyncio
 psycopg2-binary
 requests
+pytonapi
