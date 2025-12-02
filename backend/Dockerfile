@@ -9,7 +9,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# Expose the Railway target port (use 8080 if Railway target port is 8080)
+# Expose Railway target port (use 8080 as shown in your Railway settings)
 EXPOSE 8080
 
 # Use $PORT provided by Railway, fallback to 8080
