@@ -53,7 +53,7 @@ def handle_message(message: dict):
 
         logging.info(f"Sending response to {chat_id}: {response}")
 
-@app.post(f"/webhook/{TELEGRAM_BOT_TOKEN}")
+@app.post("/webhook")
 async def telegram_webhook(update: TelegramUpdate):
     try:
         if update.message:
@@ -64,5 +64,8 @@ async def telegram_webhook(update: TelegramUpdate):
         logging.error(f"Error handling Telegram update: {e}")
         return {"status": "error", "message": str(e)}
 
-    return {"status": "ok"}
+    return {"status": "ok", "message": "Update processed"}
 
+@app.get("/")
+def read_root():
+    return {"status": "Application Running", "service": "Card Game Backend"}
