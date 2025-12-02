@@ -1,3 +1,4 @@
+# Dockerfile - Railway friendly
 FROM python:3.11-slim
 ENV PYTHONUNBUFFERED=1
 WORKDIR /app
@@ -9,8 +10,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# Expose Railway target port (use 8080 as shown in your Railway settings)
+# Railway target port in your project is 8080; expose it and use $PORT at runtime
 EXPOSE 8080
 
-# Use $PORT provided by Railway, fallback to 8080
 CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8080} --log-level debug"]
