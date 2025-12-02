@@ -1,9 +1,7 @@
-# Dockerfile - build a lightweight image for FastAPI + python-telegram-bot
+# Dockerfile - full debug friendly image
 FROM python:3.11-slim
 
-# Avoid buffering for easier logs
 ENV PYTHONUNBUFFERED=1
-ENV POETRY_VIRTUALENVS_CREATE=false
 
 WORKDIR /app
 
@@ -19,8 +17,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy app
 COPY . .
 
-# Expose port (Railway sets $PORT at runtime)
-EXPOSE 8080
+# Expose default port (Railway will set $PORT)
+EXPOSE 8000
 
-# Default command uses PORT env var provided by Railway
-CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8080}"]
+# Start uvicorn with debug logging
+CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000} --log-level debug"]
