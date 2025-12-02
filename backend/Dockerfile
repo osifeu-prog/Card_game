@@ -1,12 +1,10 @@
-# שלב 1: שלב הבנייה (Base image)
+# שלב 1: שלב הבנייה
 FROM python:3.11-slim as builder
 
-# הגדרת משתני סביבה כלליים
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 ENV APP_HOME /app
 
-# יצירת ספריית האפליקציה והפיכתה לספריית העבודה
 WORKDIR $APP_HOME
 
 # התקנת תלויות
@@ -17,11 +15,9 @@ RUN pip install -r requirements.txt --no-cache-dir
 # שלב 2: שלב הסופי (Runtime image)
 FROM python:3.11-slim
 
-# הגדרת משתני סביבה כלליים
 ENV PYTHONUNBUFFERED 1
 ENV APP_HOME /app
 
-# יצירת ספריית האפליקציה
 WORKDIR $APP_HOME
 
 # העתקת התלויות המותקנות משלב הבנייה
@@ -30,10 +26,8 @@ COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/pytho
 # העתקת קוד היישום
 COPY . .
 
-# חשוב: Uvicorn מאזין על הפורט שמוגדר במשתנה הסביבה PORT (ב-Railway, זהו הפורט הנדרש).
-# EXPOSE אינו פותח את הפורט בפועל, אך משמש לתיעוד ולכלי ניתוח.
+# EXPOSE נועד לתיעוד; הפורט האמיתי נלקח ממשתנה הסביבה PORT
 EXPOSE 8080
 
-# פקודת ההפעלה הראשית (ניתן להחליף ב-Procfile או railway.toml)
-# שימוש במשתנה הסביבה $PORT (ברירת מחדל 8080 אם לא מוגדר)
+# פקודת ההפעלה הראשית: הפעלה דרך Uvicorn על הפורט שסופק ע"י המערכת.
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "${PORT:-8080}"]
