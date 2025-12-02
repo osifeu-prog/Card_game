@@ -1,8 +1,13 @@
 [build]
-baseDirectory = "backend" 
+# תיקון נתיב הבסיס (כדי שה-Build ימצא את הקבצים ב-backend/)
+baseDirectory = "backend"
 
 [deploy]
+# 🚀 התיקון הקריטי: משתמשים רק ב-${PORT}. 
+# Railway מבטיח שמשתנה זה מוגדר כ-Integer חוקי (כגון 8080 או 3000).
 startCommand = "uvicorn main:app --host 0.0.0.0 --port ${PORT}"
+
+# 🩺 בדיקות בריאות
 healthcheckPath = "/"
 healthcheckTimeout = "10s"
 healthcheckInterval = "10s"
