@@ -1,5 +1,19 @@
-fastapi==0.115.5
-uvicorn[standard]==0.32.1
-python-telegram-bot==21.7
-httpx==0.27.2
-python-dotenv==1.0.1
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Copy requirements first
+COPY requirements.txt .
+
+# Install dependencies
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY . .
+
+# Expose port
+EXPOSE 8000
+
+# Run the application
+CMD ["python", "main.py"]
