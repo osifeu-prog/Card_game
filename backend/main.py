@@ -5,12 +5,10 @@ import json
 from typing import Dict, Any
 
 from fastapi import FastAPI, Request, Response, status
-from starlette.middleware.base import BaseHTTPMiddleware  # שינוי כאן!
+from starlette.middleware.base import BaseHTTPMiddleware
 from telegram import Update
-from telegram.ext import Application
+from telegram.ext import Application, CommandHandler, CallbackContext, MessageHandler, filters
 from telegram.error import TelegramError
-
-from telegram_handler import TelegramHandlers
 
 # --- הגדרות לוגינג (DEBUG + JSON) ---
 class JsonLogFormatter(logging.Formatter):
@@ -115,8 +113,50 @@ application = (
     .build()
 )
 
-# הוספת handlers באמצעות TelegramHandlers
-telegram_handlers = TelegramHandlers(application)
+# --- Command Handlers ---
+async def start_command(update: Update, context: CallbackContext.DEFAULT_TYPE) -> None:
+    """Handler לפקודת /start"""
+    if update.message:
+        user = update.effective_user
+        logger.info(f"User {user.id} ({user.username}) started the bot")
+        await update.message.reply_text(
+            f"שלום {user.first_name}! 👋\n\n"
+            "ברוכים הבאים לבוט משחק הקלפים.\n"
+            "השתמש ב-/help כדי לראות את הפקודות הזמינות."
+        )
+
+async def help_command(update: Update, context: CallbackContext.DEFAULT_TYPE) -> None:
+    """Handler לפקודת /help"""
+    if update.message:
+        help_text = (
+            "📋 *פקודות זמינות:*\n\n"
+            "/start - התחלת השיחה עם הבוט\n"
+            "/help - הצגת הודעת עזרה זו\n"
+            "/status - בדיקת סטטוס הבוט\n"
+        )
+        await update.message.reply_text(help_text, parse_mode="Markdown")
+
+async def status_command(update: Update, context: CallbackContext.DEFAULT_TYPE) -> None:
+    """Handler לפקודת /status"""
+    if update.message:
+        await update.message.reply_text("✅ הבוט פעיל ועובד כראוי!")
+
+async def handle_message(update: Update, context: CallbackContext.DEFAULT_TYPE) -> None:
+    """Handler להודעות טקסט רגילות"""
+    if update.message and update.message.text:
+        user = update.effective_user
+        text = update.message.text
+        logger.debug(f"Message from {user.id}: {text[:50]}...")
+        
+        await update.message.reply_text(
+            f"קיבלתי את ההודעה שלך: '{text[:100]}{'...' if len(text) > 100 else ''}'"
+        )
+
+# הוספת Handlers
+application.add_handler(CommandHandler("start", start_command))
+application.add_handler(CommandHandler("help", help_command))
+application.add_handler(CommandHandler("status", status_command))
+application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
 # --- FastAPI App ---
 app = FastAPI(
