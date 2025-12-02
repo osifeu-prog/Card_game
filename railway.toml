@@ -1,0 +1,15 @@
+[build]
+# ✅ 1. תיקון נתיב הבסיס: אומר ל-Railway לחפש את ה-Dockerfile
+# ואת קבצי הקוד בתוך ספריית 'backend'. זה פותר את שגיאת 'Railpack could not determine how to build the app'.
+baseDirectory = "backend"
+
+[deploy]
+# 🚀 2. פקודת ההפעלה (Start Command)
+# מריץ את Uvicorn על הפורט הדינמי שמסופק על ידי Railway.
+startCommand = "uvicorn main:app --host 0.0.0.0 --port ${PORT}"
+
+# 🩺 3. בדיקות בריאות (Healthchecks)
+healthcheckPath = "/"
+healthcheckTimeout = "10s"
+healthcheckInterval = "10s"
+healthcheckRetries = 3
