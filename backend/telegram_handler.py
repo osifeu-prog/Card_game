@@ -1,5 +1,6 @@
 import os
 import logging
+import requests
 from typing import Optional
 from fastapi import FastAPI
 from pydantic import BaseModel
@@ -26,6 +27,15 @@ class TelegramUpdate(BaseModel):
     message: Optional[dict] = None
     callback_query: Optional[dict] = None
 
+def send_message(chat_id: int, text: str):
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+    payload = {"chat_id": chat_id, "text": text}
+    try:
+        r = requests.post(url, json=payload)
+        logging.info(f"Sent message to {chat_id}: {text} (status {r.status_code})")
+    except Exception as e:
+        logging.error(f"Failed to send message: {e}")
+
 def handle_message(message: dict):
     chat_id = message["chat"]["id"]
     text = message.get("text", "")
@@ -33,25 +43,22 @@ def handle_message(message: dict):
 
     if "/start" in text:
         response = "Welcome to TON NFT Card Game! Use /buy to start or /status."
-        logging.info(f"Sending response to {chat_id}: {response}")
+        send_message(chat_id, response)
     elif "/buy" in text:
         try:
-            user_id = chat_id
             required_amount = 0.5
             payment_address = GAME_WALLET_ADDRESS
             payment_amount = from_nano(int(required_amount * 10**9), 9)
 
             response = (
                 f"Please send {payment_amount} TON to the game wallet address:\n"
-                f"`{payment_address}`\n"
+                f"{payment_address}\n"
                 "Once paid, use /check_payment."
             )
-            logging.info(f"Instructed user {chat_id} to pay {payment_amount} TON.")
+            send_message(chat_id, response)
         except Exception as e:
             logging.error(f"Error preparing purchase instruction: {e}")
-            response = "An error occurred while preparing your purchase. Please try again later."
-
-        logging.info(f"Sending response to {chat_id}: {response}")
+            send_message(chat_id, "An error occurred while preparing your purchase. Please try again later.")
 
 @app.post("/webhook")
 async def telegram_webhook(update: TelegramUpdate):
