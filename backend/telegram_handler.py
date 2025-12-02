@@ -2,104 +2,167 @@ import os
 import logging
 import requests
 import asyncio
-from typing import Optional
+from typing import Optional, Dict, Any
+
 from fastapi import FastAPI
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
-from ton_watcher import monitor_ton_payments
+# אם אתה משתמש בבדיקות תשלום ב‑TON, ודא שהקובץ קיים והייבוא תקין
+try:
+    from ton_watcher import monitor_ton_payments
+except Exception as e:
+    monitor_ton_payments = None
+    logging.warning(f"ton_watcher import failed: {e}")
 
-# פונקציה מקומית להמרת nano ל-TON
-def from_nano(amount: int, decimals: int = 9) -> float:
-    return amount / (10 ** decimals)
-
-# טעינת משתני סביבה
-load_dotenv()
-
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-GAME_WALLET_ADDRESS = os.getenv("GAME_WALLET_ADDRESS")
-
-# הגדרת לוגים עם דיבוג מלא
+# ----- לוגים ברמת DEBUG -----
 logging.basicConfig(
     level=logging.DEBUG,
     format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
+# ----- טעינת משתני סביבה -----
+load_dotenv()
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+GAME_WALLET_ADDRESS = os.getenv("GAME_WALLET_ADDRESS")
+
+if not TELEGRAM_BOT_TOKEN:
+    logging.error("TELEGRAM_BOT_TOKEN is missing in environment")
+if not GAME_WALLET_ADDRESS:
+    logging.warning("GAME_WALLET_ADDRESS is missing in environment")
+
+# ----- FastAPI app -----
 app = FastAPI()
 
-class TelegramUpdate(BaseModel):
-    update_id: int
-    message: Optional[dict] = None
-    callback_query: Optional[dict] = None
 
+# ----- מודלים של Telegram Update (גמישים כדי לא לשבור עדכונים לא צפויים) -----
+class TelegramUpdate(BaseModel):
+    update_id: Optional[int] = None
+    message: Optional[Dict[str, Any]] = None
+    edited_message: Optional[Dict[str, Any]] = None
+    channel_post: Optional[Dict[str, Any]] = None
+    callback_query: Optional[Dict[str, Any]] = None
+
+
+# ----- עוזר: שליחת הודעה ל‑Telegram -----
 def send_message(chat_id: int, text: str):
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     payload = {"chat_id": chat_id, "text": text}
-    logging.debug(f"Sending payload: {payload}")
+    logging.debug(f"send_message payload: {payload}")
+
     try:
-        r = requests.post(url, json=payload)
-        logging.info(f"Sent message to {chat_id}: {text} (status {r.status_code})")
+        r = requests.post(url, json=payload, timeout=10)
+        logging.info(f"Sent message to {chat_id}: status {r.status_code}")
         logging.debug(f"Telegram response: {r.text}")
     except Exception as e:
-        logging.exception("Failed to send message")
+        logging.exception(f"Failed to send message to {chat_id}")
 
-def handle_message(message: dict):
-    chat_id = message["chat"]["id"]
+
+# ----- עוזר: המרת nano ל‑TON -----
+def from_nano(amount: int, decimals: int = 9) -> float:
+    return amount / (10 ** decimals)
+
+
+# ----- עיבוד הודעות -----
+def handle_text_message(message: Dict[str, Any]):
+    chat = message.get("chat", {})
+    chat_id = chat.get("id")
     text = message.get("text", "")
-    logging.debug(f"Raw message object: {message}")
-    logging.info(f"Received message from chat {chat_id}: {text}")
 
-    if "/start" in text:
-        response = "Welcome to TON NFT Card Game! Use /buy to start or /status."
-        logging.debug(f"Responding to /start with: {response}")
-        send_message(chat_id, response)
+    logging.debug(f"Raw message: {message}")
+    logging.info(f"Incoming text from chat {chat_id}: {text}")
 
-    elif "/buy" in text:
+    if not chat_id:
+        logging.error("Missing chat_id in message")
+        return
+
+    if text.strip().lower().startswith("/start"):
+        reply = "Welcome to TON NFT Card Game! Use /buy to start or /check_payment."
+        logging.debug(f"Reply to /start: {reply}")
+        send_message(chat_id, reply)
+
+    elif text.strip().lower().startswith("/buy"):
+        required_amount_ton = 0.5
+        if not GAME_WALLET_ADDRESS:
+            send_message(chat_id, "Game wallet is not configured. Please try again later.")
+            logging.error("GAME_WALLET_ADDRESS missing while handling /buy")
+            return
+
+        payment_amount_ton = from_nano(int(required_amount_ton * 10**9))
+        reply = (
+            f"Please send {payment_amount_ton} TON to the game wallet address:\n"
+            f"{GAME_WALLET_ADDRESS}\n"
+            "After payment, send /check_payment."
+        )
+        logging.debug(f"Reply to /buy: {reply}")
+        send_message(chat_id, reply)
+
+    elif text.strip().lower().startswith("/check_payment"):
+        if monitor_ton_payments is None:
+            logging.error("monitor_ton_payments is not available (import failed)")
+            send_message(chat_id, "Payment checker is temporarily unavailable. Please try again later.")
+            return
+
         try:
-            required_amount = 0.5
-            payment_address = GAME_WALLET_ADDRESS
-            payment_amount = from_nano(int(required_amount * 10**9), 9)
-
-            response = (
-                f"Please send {payment_amount} TON to the game wallet address:\n"
-                f"{payment_address}\n"
-                "Once paid, use /check_payment."
-            )
-            logging.debug(f"Responding to /buy with: {response}")
-            send_message(chat_id, response)
-        except Exception as e:
-            logging.exception("Error preparing purchase instruction")
-            send_message(chat_id, "An error occurred while preparing your purchase. Please try again later.")
-
-    elif "/check_payment" in text:
-        try:
-            logging.debug("Starting payment check via TON API")
-            is_paid = asyncio.run(monitor_ton_payments(chat_id, 0.5))
-            logging.debug(f"Payment check result: {is_paid}")
+            logging.debug("Starting TON payment check...")
+            # הערה: asyncio.run בתוך שרת עשוי ליצור לולאה חדשה. עובד פשוט, אך אם אתה עובר ל‑async מלא, שנה למבנה אסינכרוני.
+            is_paid = asyncio.run(monitor_ton_payments(user_id=chat_id, required_ton_amount=0.5))
+            logging.debug(f"TON payment result for {chat_id}: {is_paid}")
             if is_paid:
                 send_message(chat_id, "✅ Payment confirmed! You can now access your NFT card.")
             else:
                 send_message(chat_id, "❌ Payment not found yet. Please try again later.")
         except Exception as e:
-            logging.exception("Error checking payment")
-            send_message(chat_id, "An error occurred while checking your payment.")
+            logging.exception("Error while checking TON payment")
+            send_message(chat_id, "An error occurred while checking your payment. Please try again later.")
 
+    else:
+        logging.debug("Message did not match any command. Sending help.")
+        send_message(chat_id, "Unknown command. Use /start, /buy, or /check_payment.")
+
+
+# ----- Webhook GET: Healthcheck עבור בדיקה בדפדפן -----
+@app.get("/webhook")
+def webhook_healthcheck():
+    logging.debug("GET /webhook healthcheck called")
+    return {"status": "ok", "message": "Webhook endpoint is alive"}
+
+
+# ----- Webhook POST: עיבוד עדכוני Telegram -----
 @app.post("/webhook")
 async def telegram_webhook(update: TelegramUpdate):
-    logging.debug(f"Incoming webhook update: {update.dict()}")
+    logging.debug(f"POST /webhook payload: {update.dict()}")
+
     try:
-        if update.message:
-            handle_message(update.message)
-        elif update.callback_query:
-            logging.info(f"Received callback query: {update.callback_query}")
+        # הודעות טקסט רגילות
+        if update.message and isinstance(update.message, dict):
+            if "text" in update.message:
+                handle_text_message(update.message)
+            else:
+                logging.info("Received non-text message; ignoring politely.")
+        # עריכה/פוסטים בערוץ
+        elif update.edited_message:
+            logging.info("Received edited_message; currently ignored.")
+        elif update.channel_post:
+            logging.info("Received channel_post; currently ignored.")
+        # קליק על כפתור (callback query)
+        elif update.callback_query and isinstance(update.callback_query, dict):
+            logging.info(f"Received callback_query: {update.callback_query}")
+            # אפשר לעבד נתוני callback כאן
+        else:
+            logging.info("Update did not match known structures; ignoring.")
     except Exception as e:
         logging.exception("Error handling Telegram update")
+        # תמיד מחזירים תשובה כדי ש‑Telegram לא יסמן את ה‑Webhook ככושל
         return {"status": "error", "message": str(e)}
 
-    logging.debug("Webhook processed successfully, returning OK")
+    # תמיד מחזיר תשובה תקינה ל‑Telegram
+    logging.debug("Webhook update processed successfully, returning OK")
     return {"status": "ok"}
 
+
+# ----- שורש לשם בדיקה מהירה -----
 @app.get("/")
-def read_root():
-    logging.debug("Root endpoint called")
+def root():
+    logging.debug("GET / called")
     return {"status": "Application Running", "service": "Card Game Backend"}
