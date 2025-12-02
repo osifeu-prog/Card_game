@@ -1,4 +1,16 @@
+# Python
 __pycache__/
-.env
-venv/
 *.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+*.egg-info/
+
+# Logs
+*.log
+
+# Operating System
+.DS_Store
+Thumbs.db
