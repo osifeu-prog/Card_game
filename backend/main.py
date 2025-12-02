@@ -1,8 +1,11 @@
 # main.py
-# בוט טלגרם מבוסס Webhook מותאם לפריסה ב‑Railway / Docker
-# דרישות: fastapi, uvicorn, python-telegram-bot, python-dotenv
-# הסבר קצר: הקוד מגדיר healthcheck ב־/ ומאזין ל־/webhook/<TOKEN>.
-# פעולות חיצוניות (set_webhook, עיבוד עדכונים) נעשות ברקע כדי לא לחסום startup.
+# Telegram webhook bot (FastAPI) - Railway/Docker ready
+# Requires: fastapi, uvicorn, python-telegram-bot, python-dotenv
+# Behavior:
+# - Healthcheck on /
+# - Webhook endpoint on /webhook/<TOKEN>
+# - set_webhook runs in background during startup
+# - Incoming updates are scheduled for background processing to return 200 quickly
 
 import os
 import asyncio
@@ -16,19 +19,18 @@ from dotenv import load_dotenv
 from telegram import Bot, Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, Application
 
-# Load environment variables from .env (local dev)
+# Load .env for local development
 load_dotenv()
 
-# Environment variables (Railway: set these in project variables)
+# Environment variables (set these in Railway)
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN") or os.getenv("TELEGRAM_TOKEN")
 BASE_URL = os.getenv("BASE_URL")  # e.g. https://cardgame-production-d1cd.up.railway.app
-# PORT is provided by Railway at runtime; uvicorn will use it via CMD/Procfile/Dockerfile
-PORT = int(os.getenv("PORT", "8000"))
+PORT = int(os.getenv("PORT", "8080"))
 
 if not TOKEN:
     raise RuntimeError("Missing TELEGRAM_BOT_TOKEN / TELEGRAM_TOKEN environment variable")
 
-# Logging configuration - DEBUG for detailed logs
+# Logging
 logging.basicConfig(
     level=logging.DEBUG,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
@@ -42,7 +44,7 @@ app = FastAPI()
 bot = Bot(token=TOKEN)
 application: Application = ApplicationBuilder().token(TOKEN).build()
 
-# Webhook path (include token to make it unique)
+# Webhook path (unique by token)
 WEBHOOK_PATH = f"/webhook/{TOKEN}"
 
 # Example command handler
@@ -129,7 +131,6 @@ async def on_shutdown():
 # Helper to process update in background to avoid blocking the HTTP response
 async def process_update_in_background(update: Update):
     try:
-        # application.process_update is async; schedule it as a task
         await application.process_update(update)
         logger.debug("Update processed: update_id=%s", getattr(update, "update_id", None))
     except Exception:
@@ -158,10 +159,9 @@ async def telegram_webhook(request: Request):
         asyncio.create_task(process_update_in_background(update))
     except Exception:
         logger.exception("Failed to schedule update processing id=%s", request_id)
-        # still return 200 to avoid Telegram retries; errors are logged
     return JSONResponse({"ok": True})
 
-# Optional: quick CLI run for local testing (uvicorn should be used in production)
+# Local run for development
 if __name__ == "__main__":
     import uvicorn
     logger.info("Starting uvicorn for local testing on port %s", PORT)
