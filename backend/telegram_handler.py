@@ -8,11 +8,11 @@ from dotenv import load_dotenv
 
 from ton_watcher import monitor_ton_payments
 
-# פונקציה מקומית במקום pytonlib
+# פונקציה מקומית להמרת nano ל-TON
 def from_nano(amount: int, decimals: int = 9) -> float:
     return amount / (10 ** decimals)
 
-# Load environment variables
+# טעינת משתני סביבה
 load_dotenv()
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
@@ -28,6 +28,9 @@ class TelegramUpdate(BaseModel):
     callback_query: Optional[dict] = None
 
 def send_message(chat_id: int, text: str):
+    """
+    שולח הודעה חזרה ל-Telegram API
+    """
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     payload = {"chat_id": chat_id, "text": text}
     try:
@@ -44,6 +47,7 @@ def handle_message(message: dict):
     if "/start" in text:
         response = "Welcome to TON NFT Card Game! Use /buy to start or /status."
         send_message(chat_id, response)
+
     elif "/buy" in text:
         try:
             required_amount = 0.5
@@ -60,19 +64,9 @@ def handle_message(message: dict):
             logging.error(f"Error preparing purchase instruction: {e}")
             send_message(chat_id, "An error occurred while preparing your purchase. Please try again later.")
 
-@app.post("/webhook")
-async def telegram_webhook(update: TelegramUpdate):
-    try:
-        if update.message:
-            handle_message(update.message)
-        elif update.callback_query:
-            logging.info(f"Received callback query: {update.callback_query}")
-    except Exception as e:
-        logging.error(f"Error handling Telegram update: {e}")
-        return {"status": "error", "message": str(e)}
-
-    return {"status": "ok", "message": "Update processed"}
-
-@app.get("/")
-def read_root():
-    return {"status": "Application Running", "service": "Card Game Backend"}
+    elif "/check_payment" in text:
+        # בדיקה אמיתית מול TON API
+        try:
+            is_paid = asyncio.run(monitor_ton_payments(chat_id, 0.5))
+            if is_paid:
+                send_message(chat_id, "✅ Payment confirmed! You can now access your NFT card.")
