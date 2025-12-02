@@ -1,7 +1,10 @@
 import logging
-from telegram_handler import app  # מייבא את FastAPI app מהקובץ telegram_handler
+from telegram_handler import app
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+# הגדרת לוגים ברמת DEBUG
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s - %(levelname)s - %(message)s"
+)
 
-# Railway יריץ את זה עם:
-# uvicorn main:app --host 0.0.0.0 --port 8000
+logging.debug("Main.py loaded, FastAPI app imported successfully")
