@@ -66,6 +66,3 @@ async def telegram_webhook(update: TelegramUpdate):
 
     return {"status": "ok"}
 
-@app.get("/")
-def read_root():
-    return {"status": "Application Running", "service": "Card Game Backend"}
