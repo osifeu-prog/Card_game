@@ -1,11 +1,10 @@
 [build]
-# ✅ הגדרת ספריית הבסיס ל-Railway
-# זה אומר ל-Railway לחפש את ה-Dockerfile, main.py וכו', בתוך ספריית backend.
-baseDirectory = "backend"
+# ✅ זה אומר ל-Railway להתחיל את תהליך ה-Build בתוך ספריית backend.
+baseDirectory = "backend" 
 
 [deploy]
-# 🚀 פקודת ההפעלה (Start Command)
 startCommand = "uvicorn main:app --host 0.0.0.0 --port ${PORT}"
+healthcheckPath = "/"
 
 # 🩺 בדיקות בריאות (Healthchecks)
 healthcheckPath = "/"
