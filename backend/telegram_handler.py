@@ -1,6 +1,7 @@
 import os
 import logging
 import requests
+import asyncio
 from typing import Optional
 from fastapi import FastAPI
 from pydantic import BaseModel
@@ -65,8 +66,30 @@ def handle_message(message: dict):
             send_message(chat_id, "An error occurred while preparing your purchase. Please try again later.")
 
     elif "/check_payment" in text:
-        # בדיקה אמיתית מול TON API
         try:
             is_paid = asyncio.run(monitor_ton_payments(chat_id, 0.5))
             if is_paid:
                 send_message(chat_id, "✅ Payment confirmed! You can now access your NFT card.")
+            else:
+                send_message(chat_id, "❌ Payment not found yet. Please try again later.")
+        except Exception as e:
+            logging.error(f"Error checking payment: {e}")
+            send_message(chat_id, "An error occurred while checking your payment.")
+
+@app.post("/webhook")
+async def telegram_webhook(update: TelegramUpdate):
+    try:
+        if update.message:
+            handle_message(update.message)
+        elif update.callback_query:
+            logging.info(f"Received callback query: {update.callback_query}")
+    except Exception as e:
+        logging.error(f"Error handling Telegram update: {e}")
+        return {"status": "error", "message": str(e)}
+
+    # תמיד מחזיר תשובה ל-Telegram כדי שלא יראה "Application failed to respond"
+    return {"status": "ok"}
+
+@app.get("/")
+def read_root():
+    return {"status": "Application Running", "service": "Card Game Backend"}
