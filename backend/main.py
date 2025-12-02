@@ -5,7 +5,7 @@ import json
 from typing import Dict, Any
 
 from fastapi import FastAPI, Request, Response, status
-from fastapi.middleware.base import BaseHTTPMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware  # שינוי כאן!
 from telegram import Update
 from telegram.ext import Application
 from telegram.error import TelegramError
