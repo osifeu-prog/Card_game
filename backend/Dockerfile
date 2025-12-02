@@ -28,7 +28,7 @@ WORKDIR $APP_HOME
 # העתקת התלויות המותקנות משלב הבנייה
 COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 
-# --- 🎯 התיקון: התקנת curl ---
+# --- ✅ התיקון: התקנת curl ---
 # עדכון רשימת החבילות והתקנת curl (חיוני עבור start.sh)
 RUN apt-get update && apt-get install -y curl \
     && rm -rf /var/lib/apt/lists/*
