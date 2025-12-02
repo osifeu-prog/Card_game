@@ -1,16 +1,12 @@
 [build]
-# הגדרות בנייה (אם נדרשות)
+# הגדרות בנייה - ברירת מחדל ל-Dockerfile
 
 [deploy]
-# פקודת ההתחלה המפורשת
+# פקודת ההתחלה המפורשת (פתרון לבעיית פורט)
 startCommand = "uvicorn main:app --host 0.0.0.0 --port ${PORT}"
 
-# הגדרת בדיקת הבריאות (Healthcheck)
+# הגדרת בדיקת הבריאות (פותר את בעיית ה-Healthcheck)
 healthcheckPath = "/"
 healthcheckTimeout = "5s"
 healthcheckInterval = "10s"
 healthcheckRetries = 3
-
-# הגדרת פורט (ברירת מחדל 8080)
-# ה-PORT בפועל מגיע ממשתני הסביבה ש-Railway מגדיר
-# אבל כדאי לוודא שהוא מוגדר כראוי
