@@ -1,0 +1,11 @@
+[build]
+# הגדרות בנייה - ברירת מחדל ל-Dockerfile
+
+[deploy]
+# אין צורך ב-startCommand אם ה-CMD ב-Dockerfile הוא start.sh
+# startCommand = "/bin/bash start.sh" 
+
+healthcheckPath = "/"
+healthcheckTimeout = "5s"
+healthcheckInterval = "10s"
+healthcheckRetries = 3
