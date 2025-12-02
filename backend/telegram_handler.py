@@ -5,10 +5,11 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
-# אין צורך ב-Address
-from pytonlib.utils.numbers import from_nano
-
 from ton_watcher import monitor_ton_payments
+
+# פונקציה מקומית במקום pytonlib
+def from_nano(amount: int, decimals: int = 9) -> float:
+    return amount / (10 ** decimals)
 
 # Load environment variables
 load_dotenv()
