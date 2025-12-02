@@ -1,16 +1,10 @@
-# railway.toml
+# railway.toml - Config as Code for Railway
+# מגדיר builder, פקודת start, ו‑healthcheck
 [build]
-builder = "dockerfile"
-dockerfilePath = "backend/Dockerfile"
-
-[start]
-command = "uvicorn main:app --host 0.0.0.0 --port 8000"
+builder = "RAILPACK"
 
 [deploy]
-restartPolicy = "on-failure"
-restartRetries = 10
-
-[service]
-name = "card_game_backend"
-internalPort = 8000
-externalPort = 8080
+startCommand = "uvicorn main:app --host 0.0.0.0 --port $PORT"
+healthcheckPath = "/"
+healthcheckTimeout = 100
+restartPolicyType = "always"
