@@ -1,11 +1,14 @@
 [build]
-# הגדרות בנייה - ברירת מחדל ל-Dockerfile
+# ✅ הגדרת ספריית הבסיס ל-Railway
+# זה אומר ל-Railway לחפש את ה-Dockerfile, main.py וכו', בתוך ספריית backend.
+baseDirectory = "backend"
 
 [deploy]
-# אין צורך ב-startCommand אם ה-CMD ב-Dockerfile הוא start.sh
-# startCommand = "/bin/bash start.sh" 
+# 🚀 פקודת ההפעלה (Start Command)
+startCommand = "uvicorn main:app --host 0.0.0.0 --port ${PORT}"
 
+# 🩺 בדיקות בריאות (Healthchecks)
 healthcheckPath = "/"
-healthcheckTimeout = "5s"
+healthcheckTimeout = "10s"
 healthcheckInterval = "10s"
 healthcheckRetries = 3
