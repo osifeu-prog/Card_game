@@ -7,7 +7,7 @@ from typing import Dict, Any
 from fastapi import FastAPI, Request, Response, status
 from fastapi.middleware.base import BaseHTTPMiddleware
 from telegram import Update
-from telegram.ext import Application, CommandHandler, CallbackContext, MessageHandler
+from telegram.ext import Application, CommandHandler, CallbackContext, MessageHandler, filters
 from telegram.error import TelegramError
 
 # --- הגדרות לוגינג (DEBUG + JSON) ---
@@ -21,48 +21,73 @@ class JsonLogFormatter(logging.Formatter):
             "message": record.getMessage(),
         }
         for key, value in record.__dict__.items():
-            if key not in ['args', 'asctime', 'created', 'exc_info', 'exc_text', 'filename', 'funcName', 'levelname', 'levelno', 'lineno', 'module', 'msecs', 'msg', 'name', 'pathname', 'process', 'processName', 'relativeCreated', 'stack_info', 'thread', 'threadName'] and not key.startswith('_'):
+            if key not in ['args', 'asctime', 'created', 'exc_info', 'exc_text', 'filename', 
+                          'funcName', 'levelname', 'levelno', 'lineno', 'module', 'msecs', 
+                          'msg', 'name', 'pathname', 'process', 'processName', 'relativeCreated', 
+                          'stack_info', 'thread', 'threadName'] and not key.startswith('_'):
                 log_record[key] = value
         if record.exc_info:
             log_record["exception"] = self.formatException(record.exc_info)
         return json.dumps(log_record, ensure_ascii=False)
 
+# הגדרת Logger
 logger = logging.getLogger()
-logger.setLevel(logging.DEBUG) 
+logger.setLevel(logging.DEBUG)
+
+# ניקוי handlers קיימים
 if logger.handlers:
     for handler in logger.handlers:
         logger.removeHandler(handler)
+
+# הוספת handler חדש
 console_handler = logging.StreamHandler()
 console_handler.setFormatter(JsonLogFormatter())
 logger.addHandler(console_handler)
 
+# הגדרת רמות לוג לספריות חיצוניות
 logging.getLogger("uvicorn.access").setLevel(logging.INFO)
 logging.getLogger("uvicorn.error").setLevel(logging.INFO)
+logging.getLogger("httpx").setLevel(logging.WARNING)
 
 # --- משתני סביבה ---
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 BASE_URL = os.getenv("BASE_URL")
-BOT_USERNAME = os.getenv("BOT_USERNAME", "DefaultBot")
+BOT_USERNAME = os.getenv("BOT_USERNAME", "CardGameBot")
+
+if not BOT_TOKEN:
+    logger.error("TELEGRAM_BOT_TOKEN is not set!")
+    raise ValueError("TELEGRAM_BOT_TOKEN environment variable is required")
 
 WEBHOOK_PATH = f"/webhook/{BOT_TOKEN}"
-WEBHOOK_URL = f"{BASE_URL}{WEBHOOK_PATH}" if BASE_URL and BOT_TOKEN else None
+WEBHOOK_URL = f"{BASE_URL}{WEBHOOK_PATH}" if BASE_URL else None
 
 logger.info(f"Main application module loaded for bot: {BOT_USERNAME}")
 
-# --- Set Webhook Function (חזרה ל-Python) ---
+# --- Set Webhook Function ---
 async def set_webhook_on_startup(application: Application) -> None:
     """מגדיר את ה-webhook באמצעות python-telegram-bot API."""
     logger.debug("Checking for Telegram Bot setup...")
-    if not WEBHOOK_URL or not BOT_TOKEN:
-        logger.error("BASE_URL or TELEGRAM_BOT_TOKEN is missing. Cannot set webhook.")
+    
+    if not WEBHOOK_URL:
+        logger.warning("BASE_URL is not set. Webhook will not be configured.")
+        logger.warning("Set BASE_URL environment variable to enable webhook mode.")
         return
     
     try:
         logger.info(f"Attempting to set webhook to: {WEBHOOK_URL}")
         
-        # Set Webhook בפועל באמצעות Application.bot
-        await application.bot.set_webhook(url=WEBHOOK_URL, allowed_updates=Update.ALL_TYPES)
+        # הסרת webhook קיים תחילה
+        await application.bot.delete_webhook(drop_pending_updates=True)
+        await asyncio.sleep(1)
         
+        # הגדרת webhook חדש
+        await application.bot.set_webhook(
+            url=WEBHOOK_URL,
+            allowed_updates=Update.ALL_TYPES,
+            drop_pending_updates=True
+        )
+        
+        # בדיקת הסטטוס
         info = await application.bot.get_webhook_info()
         
         logger.info(
@@ -75,7 +100,6 @@ async def set_webhook_on_startup(application: Application) -> None:
             }
         )
     except TelegramError as e:
-        # זה יופיע בלוגים אם יש בעיית TOKEN או SSL/URL
         logger.error(f"Failed to set webhook due to Telegram API error: {e}", exc_info=True)
     except Exception as e:
         logger.error(f"Failed to set webhook due to unexpected error: {e}", exc_info=True)
@@ -85,70 +109,166 @@ async def set_webhook_on_startup(application: Application) -> None:
 application = (
     Application.builder()
     .token(BOT_TOKEN)
-    .concurrent_updates(True) 
+    .concurrent_updates(True)
     .build()
 )
 
-# הוספת Handlers (כמו קודם)
+# --- Command Handlers ---
 async def start_command(update: Update, context: CallbackContext.DEFAULT_TYPE) -> None:
+    """Handler לפקודת /start"""
     if update.message:
-        await update.message.reply_text("שלום! אני מוכן לעבודה.")
-        
+        user = update.effective_user
+        logger.info(f"User {user.id} ({user.username}) started the bot")
+        await update.message.reply_text(
+            f"שלום {user.first_name}! 👋\n\n"
+            "ברוכים הבאים לבוט משחק הקלפים.\n"
+            "השתמש ב-/help כדי לראות את הפקודות הזמינות."
+        )
+
+async def help_command(update: Update, context: CallbackContext.DEFAULT_TYPE) -> None:
+    """Handler לפקודת /help"""
+    if update.message:
+        help_text = (
+            "📋 *פקודות זמינות:*\n\n"
+            "/start - התחלת השיחה עם הבוט\n"
+            "/help - הצגת הודעת עזרה זו\n"
+            "/status - בדיקת סטטוס הבוט\n"
+        )
+        await update.message.reply_text(help_text, parse_mode="Markdown")
+
+async def status_command(update: Update, context: CallbackContext.DEFAULT_TYPE) -> None:
+    """Handler לפקודת /status"""
+    if update.message:
+        await update.message.reply_text("✅ הבוט פעיל ועובד כראוי!")
+
 async def handle_message(update: Update, context: CallbackContext.DEFAULT_TYPE) -> None:
+    """Handler להודעות טקסט רגילות"""
     if update.message and update.message.text:
-        await asyncio.sleep(0.05) 
-        await update.message.reply_text(f"קיבלתי: '{update.message.text[:20]}...'")
+        user = update.effective_user
+        text = update.message.text
+        logger.debug(f"Message from {user.id}: {text[:50]}...")
+        
+        await update.message.reply_text(
+            f"קיבלתי את ההודעה שלך: '{text[:100]}{'...' if len(text) > 100 else ''}'"
+        )
 
+# הוספת Handlers
 application.add_handler(CommandHandler("start", start_command))
-application.add_handler(MessageHandler(None, handle_message))
-
+application.add_handler(CommandHandler("help", help_command))
+application.add_handler(CommandHandler("status", status_command))
+application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
 # --- FastAPI App ---
 app = FastAPI(
     title=f"Telegram Webhook Bot ({BOT_USERNAME})",
-    version="3.0.0",
-    # קריאה ל-set_webhook כפונקציית Startup
-    on_startup=[lambda: set_webhook_on_startup(application)], 
-    on_shutdown=[lambda: application.shutdown()]
+    version="1.0.0",
+    description="Telegram bot for card game with FastAPI webhook"
 )
 
-# Middleware לרישום בקשות (כמו קודם)
+# --- Startup/Shutdown Events ---
+@app.on_event("startup")
+async def startup_event():
+    """אירוע startup של FastAPI"""
+    logger.info("FastAPI application starting up...")
+    await set_webhook_on_startup(application)
+    logger.info("Application startup complete")
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """אירוע shutdown של FastAPI"""
+    logger.info("FastAPI application shutting down...")
+    await application.shutdown()
+    logger.info("Application shutdown complete")
+
+# --- Middleware ---
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
+    """Middleware לרישום בקשות HTTP"""
     async def dispatch(self, request: Request, call_next):
         start_time = asyncio.get_event_loop().time()
-        # ... (לוגיקת רישום נשארה זהה) ...
+        
+        # עיבוד הבקשה
         response: Response = await call_next(request)
+        
         process_time = asyncio.get_event_loop().time() - start_time
+        
+        # רישום הבקשה
         logger.info(
-            "Request finished.", 
+            "Request processed",
             extra={
-                "method": request.method, 
-                "url": str(request.url).replace(f"/webhook/{BOT_TOKEN}", "/webhook/REDACTED_TOKEN"),
-                "status_code": response.status_code, 
+                "method": request.method,
+                "url": str(request.url).replace(BOT_TOKEN, "***TOKEN***"),
+                "status_code": response.status_code,
                 "process_time_ms": int(process_time * 1000)
             }
         )
+        
         return response
 
 app.add_middleware(RequestLoggingMiddleware)
 
-@app.get("/", status_code=status.HTTP_200_OK, tags=["Healthcheck"])
+# --- API Endpoints ---
+@app.get("/", status_code=status.HTTP_200_OK, tags=["Health"])
 async def health_check() -> Dict[str, str]:
-    logger.debug("Healthcheck endpoint reached.")
-    return {"status": "ok", "message": f"Bot {BOT_USERNAME} is running."}
+    """Endpoint לבדיקת בריאות השרת"""
+    logger.debug("Health check endpoint accessed")
+    return {
+        "status": "ok",
+        "message": f"Bot {BOT_USERNAME} is running",
+        "webhook_configured": WEBHOOK_URL is not None
+    }
 
-
-@app.post(WEBHOOK_PATH, status_code=status.HTTP_200_OK, tags=["Telegram Webhook"])
-async def telegram_webhook(request: Request) -> Response:
-    """Endpoint לקבלת עדכונים מטלגרם."""
-    body = await request.body() 
+@app.get("/webhook-info", status_code=status.HTTP_200_OK, tags=["Telegram"])
+async def webhook_info() -> Dict[str, Any]:
+    """מידע על ה-webhook הנוכחי"""
     try:
+        info = await application.bot.get_webhook_info()
+        return {
+            "url": info.url,
+            "has_custom_certificate": info.has_custom_certificate,
+            "pending_update_count": info.pending_update_count,
+            "max_connections": info.max_connections,
+            "allowed_updates": info.allowed_updates,
+            "last_error_date": info.last_error_date,
+            "last_error_message": info.last_error_message,
+        }
+    except Exception as e:
+        logger.error(f"Error getting webhook info: {e}", exc_info=True)
+        return {"error": str(e)}
+
+@app.post(WEBHOOK_PATH, status_code=status.HTTP_200_OK, tags=["Telegram"])
+async def telegram_webhook(request: Request) -> Response:
+    """Endpoint לקבלת עדכונים מטלגרם"""
+    try:
+        body = await request.body()
         update_json = json.loads(body.decode("utf-8"))
+        
+        # יצירת אובייקט Update
         update = Update.de_json(update_json, application.bot)
-        # עיבוד במשימת רקע
-        asyncio.create_task(application.process_update(update))
-        logger.debug("Update received and process_update scheduled.", extra={"update_id": update.update_id})
+        
+        if update:
+            # עיבוד העדכון באופן אסינכרוני
+            asyncio.create_task(application.process_update(update))
+            logger.debug(
+                "Update received and scheduled for processing",
+                extra={"update_id": update.update_id}
+            )
+        else:
+            logger.warning("Received invalid update (None)")
+            
+    except json.JSONDecodeError as e:
+        logger.error(f"Failed to decode JSON: {e}", exc_info=True)
     except Exception as e:
         logger.error(f"Error processing webhook: {e}", exc_info=True)
-        
+    
+    # תמיד להחזיר 200 OK לטלגרם
     return Response(status_code=status.HTTP_200_OK)
+
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.getenv("PORT", 8000))
+    uvicorn.run(
+        "main:app",
+        host="0.0.0.0",
+        port=port,
+        log_level="info"
+    )
