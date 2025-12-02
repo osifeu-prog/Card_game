@@ -1,8 +1,7 @@
 import asyncio
-import os
 import logging
-from pytonapi import Tonapi
 from dotenv import load_dotenv
+import os
 
 # פונקציה מקומית במקום pytonlib
 def from_nano(amount: int, decimals: int = 9) -> float:
@@ -10,39 +9,15 @@ def from_nano(amount: int, decimals: int = 9) -> float:
 
 load_dotenv()
 
-TON_API_KEY = os.getenv("TON_API_KEY")
 GAME_WALLET_ADDRESS = os.getenv("GAME_WALLET_ADDRESS")
-
-try:
-    TON_CLIENT = Tonapi(api_key=TON_API_KEY, is_testnet=True)
-except Exception as e:
-    logging.error(f"Failed to initialize TONAPI client: {e}")
-    TON_CLIENT = None
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
+# פונקציה מדומה – במקום pytonapi
 async def check_payment(address: str, amount_nano: int) -> bool:
-    if not TON_CLIENT or not GAME_WALLET_ADDRESS:
-        logging.error("TON client or GAME_WALLET_ADDRESS not configured.")
-        return False
-
-    try:
-        transactions = await TON_CLIENT.accounts.get_transactions(
-            account_id=GAME_WALLET_ADDRESS,
-            limit=10,
-            accept_data_camel=True
-        )
-
-        for tx in transactions.transactions:
-            if tx.in_msg and tx.in_msg.source and tx.in_msg.source.account_id == address:
-                received_amount_nano = int(tx.in_msg.value)
-                if received_amount_nano == amount_nano:
-                    logging.info(f"Payment confirmed! Sender: {address}, Amount: {from_nano(amount_nano, 9)} TON")
-                    return True
-        return False
-    except Exception as e:
-        logging.error(f"Error checking TON payment: {e}")
-        return False
+    logging.info(f"Stub check_payment called for address={address}, amount={amount_nano}")
+    # כאן אפשר להוסיף לוגיקה אמיתית בעתיד
+    return True  # כרגע תמיד מחזיר הצלחה
 
 async def monitor_ton_payments(user_id: int, required_ton_amount: float):
     required_nano_amount = int(required_ton_amount * 10**9)
