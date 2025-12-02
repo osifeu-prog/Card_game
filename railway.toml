@@ -1,9 +1,0 @@
-[build]
-baseDirectory = "backend" 
-
-[deploy]
-# ⚠️ הפקודה StartCommand נמחקה מכאן כדי שה-CMD ב-Dockerfile ישלוט.
-healthcheckPath = "/"
-healthcheckTimeout = "10s"
-healthcheckInterval = "10s"
-healthcheckRetries = 3
