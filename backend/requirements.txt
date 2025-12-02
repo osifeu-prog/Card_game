@@ -3,3 +3,14 @@ uvicorn[standard]==0.32.1
 python-telegram-bot==21.7
 httpx==0.27.2
 python-dotenv==1.0.1
+```
+
+### שלב 3: צור Service חדש
+1. **Railway → New → Deploy from GitHub**
+2. בחר `Card_game`
+3. **Settings → Source → Root Directory:** `backend`
+4. **Settings → Build → Builder:** ודא ש-`Dockerfile` נבחר
+5. **Variables:**
+```
+   TELEGRAM_BOT_TOKEN=your_token
+   BOT_USERNAME=YourBotName
