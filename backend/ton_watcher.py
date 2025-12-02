@@ -1,9 +1,12 @@
 import asyncio
 import os
 import logging
-from pytonlib.utils.numbers import from_nano
 from pytonapi import Tonapi
 from dotenv import load_dotenv
+
+# פונקציה מקומית במקום pytonlib
+def from_nano(amount: int, decimals: int = 9) -> float:
+    return amount / (10 ** decimals)
 
 load_dotenv()
 
