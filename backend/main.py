@@ -9,10 +9,10 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 from telegram.error import TelegramError
+from contextlib import asynccontextmanager
 
 # --- הגדרות לוגינג (DEBUG + JSON) ---
 class JsonLogFormatter(logging.Formatter):
-    """פורמטר לוגים בפורמט JSON."""
     def format(self, record):
         log_record: Dict[str, Any] = {
             "timestamp": self.formatTime(record, self.datefmt),
@@ -21,23 +21,20 @@ class JsonLogFormatter(logging.Formatter):
             "message": record.getMessage(),
         }
         for key, value in record.__dict__.items():
-            if key not in ['args', 'asctime', 'created', 'exc_info', 'exc_text', 'filename',
-                          'funcName', 'levelname', 'levelno', 'lineno', 'module', 'msecs',
-                          'msg', 'name', 'pathname', 'process', 'processName', 'relativeCreated',
-                          'stack_info', 'thread', 'threadName'] and not key.startswith('_'):
+            if key not in ['args','asctime','created','exc_info','exc_text','filename',
+                          'funcName','levelname','levelno','lineno','module','msecs',
+                          'msg','name','pathname','process','processName','relativeCreated',
+                          'stack_info','thread','threadName'] and not key.startswith('_'):
                 log_record[key] = value
         if record.exc_info:
             log_record["exception"] = self.formatException(record.exc_info)
         return json.dumps(log_record, ensure_ascii=False)
 
-# הגדרת Logger
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
-
 if logger.handlers:
     for handler in logger.handlers:
         logger.removeHandler(handler)
-
 console_handler = logging.StreamHandler()
 console_handler.setFormatter(JsonLogFormatter())
 logger.addHandler(console_handler)
@@ -62,33 +59,26 @@ logger.info(f"Main application module loaded for bot: {BOT_USERNAME}")
 
 # --- Set Webhook Function ---
 async def set_webhook_on_startup(application: Application) -> None:
-    logger.debug("Checking for Telegram Bot setup...")
-
     if not WEBHOOK_URL:
         logger.warning("BASE_URL is not set. Webhook will not be configured.")
         return
-
     try:
         logger.info(f"Attempting to set webhook to: {WEBHOOK_URL}")
         await application.bot.delete_webhook(drop_pending_updates=True)
         await asyncio.sleep(1)
-
         await application.bot.set_webhook(
             url=WEBHOOK_URL,
             allowed_updates=Update.ALL_TYPES,
             drop_pending_updates=True
         )
-
         info = await application.bot.get_webhook_info()
-        logger.info(
-            "Webhook set successfully!",
+        logger.info("Webhook set successfully!",
             extra={
                 "url": info.url,
                 "pending_updates": info.pending_update_count,
                 "max_connections": info.max_connections,
                 "last_error_message": info.last_error_message or "None",
-            }
-        )
+            })
     except TelegramError as e:
         logger.error(f"Failed to set webhook due to Telegram API error: {e}", exc_info=True)
     except Exception as e:
@@ -106,7 +96,6 @@ application = (
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.message:
         user = update.effective_user
-        logger.info(f"User {user.id} ({user.username}) started the bot")
         await update.message.reply_text(
             f"שלום {user.first_name}! 👋\n\n"
             "ברוכים הבאים לבוט משחק הקלפים.\n"
@@ -129,11 +118,12 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.message and update.message.text:
-        user = update.effective_user
-        text = update.message.text
-        logger.debug(f"Message from {user.id}: {text[:50]}...")
+        text = update.message.text.strip().lower()
+        if text == "start":  # תגובה גם ל-START
+            await start_command(update, context)
+            return
         await update.message.reply_text(
-            f"קיבלתי את ההודעה שלך: '{text[:100]}{'...' if len(text) > 100 else ''}'"
+            f"קיבלתי את ההודעה שלך: '{update.message.text[:100]}{'...' if len(update.message.text) > 100 else ''}'"
         )
 
 application.add_handler(CommandHandler("start", start_command))
@@ -141,24 +131,24 @@ application.add_handler(CommandHandler("help", help_command))
 application.add_handler(CommandHandler("status", status_command))
 application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
+# --- Lifespan Events ---
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    logger.info("FastAPI application starting up...")
+    await set_webhook_on_startup(application)
+    logger.info("Application startup complete")
+    yield
+    logger.info("FastAPI application shutting down...")
+    await application.shutdown()
+    logger.info("Application shutdown complete")
+
 # --- FastAPI App ---
 app = FastAPI(
     title=f"Telegram Webhook Bot ({BOT_USERNAME})",
     version="1.0.0",
-    description="Telegram bot for card game with FastAPI webhook"
+    description="Telegram bot for card game with FastAPI webhook",
+    lifespan=lifespan
 )
-
-@app.on_event("startup")
-async def startup_event():
-    logger.info("FastAPI application starting up...")
-    await set_webhook_on_startup(application)
-    logger.info("Application startup complete")
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    logger.info("FastAPI application shutting down...")
-    await application.shutdown()
-    logger.info("Application shutdown complete")
 
 # --- Middleware ---
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
@@ -166,15 +156,13 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         start_time = asyncio.get_event_loop().time()
         response: Response = await call_next(request)
         process_time = asyncio.get_event_loop().time() - start_time
-        logger.info(
-            "Request processed",
+        logger.info("Request processed",
             extra={
                 "method": request.method,
                 "url": str(request.url).replace(BOT_TOKEN, "***TOKEN***"),
                 "status_code": response.status_code,
                 "process_time_ms": int(process_time * 1000)
-            }
-        )
+            })
         return response
 
 app.add_middleware(RequestLoggingMiddleware)
@@ -182,7 +170,6 @@ app.add_middleware(RequestLoggingMiddleware)
 # --- API Endpoints ---
 @app.get("/", status_code=status.HTTP_200_OK, tags=["Health"])
 async def health_check() -> Dict[str, str]:
-    logger.debug("Health check endpoint accessed")
     return {
         "status": "ok",
         "message": f"Bot {BOT_USERNAME} is running",
@@ -212,30 +199,17 @@ async def telegram_webhook(request: Request) -> Response:
         body = await request.body()
         update_json = json.loads(body.decode("utf-8"))
         update = Update.de_json(update_json, application.bot)
-
         if update:
             asyncio.create_task(application.process_update(update))
-            logger.debug(
-                "Update received and scheduled for processing",
-                extra={"update_id": update.update_id}
-            )
+            logger.debug("Update received", extra={"update_id": update.update_id})
         else:
             logger.warning("Received invalid update (None)")
-    except json.JSONDecodeError as e:
-        logger.error(f"Failed to decode JSON: {e}", exc_info=True)
     except Exception as e:
         logger.error(f"Error processing webhook: {e}", exc_info=True)
-
     return Response(status_code=status.HTTP_200_OK)
 
 if __name__ == "__main__":
     import uvicorn
     port = int(os.getenv("PORT", "8000"))
     logger.info(f"Starting server on port {port}")
-    uvicorn.run(
-        "main:app",
-        host="0.0.0.0",
-        port=port,
-        log_level="info",
-        access_log=True
-    )
+    uvicorn.run("main:app", host="0.0.0.0", port=port, log_level="info", access_log=True)
