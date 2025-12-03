@@ -96,6 +96,7 @@ application = (
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.message:
         user = update.effective_user
+        logger.info(f"START command triggered by user {user.id} ({user.username}) with text: {update.message.text}")
         await update.message.reply_text(
             f"שלום {user.first_name}! 👋\n\n"
             "ברוכים הבאים לבוט משחק הקלפים.\n"
@@ -104,6 +105,8 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.message:
+        user = update.effective_user
+        logger.info(f"HELP command triggered by user {user.id} ({user.username})")
         help_text = (
             "📋 *פקודות זמינות:*\n\n"
             "/start - התחלת השיחה עם הבוט\n"
@@ -114,16 +117,20 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
 async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.message:
+        user = update.effective_user
+        logger.info(f"STATUS command triggered by user {user.id} ({user.username})")
         await update.message.reply_text("✅ הבוט פעיל ועובד כראוי!")
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.message and update.message.text:
-        text = update.message.text.strip().lower()
-        if text in ["start", "/start", "התחל"]:
+        user = update.effective_user
+        text = update.message.text.strip()
+        logger.info(f"Message received from {user.id} ({user.username}): {text}")
+        if text.lower() in ["start", "/start", "התחל"]:
             await start_command(update, context)
             return
         await update.message.reply_text(
-            f"קיבלתי את ההודעה שלך: '{update.message.text[:100]}{'...' if len(update.message.text) > 100 else ''}'"
+            f"קיבלתי את ההודעה שלך: '{text[:100]}{'...' if len(text) > 100 else ''}'"
         )
 
 application.add_handler(CommandHandler("start", start_command))
