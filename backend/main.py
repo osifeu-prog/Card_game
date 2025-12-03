@@ -53,7 +53,7 @@ if not BOT_TOKEN:
     raise ValueError("TELEGRAM_BOT_TOKEN environment variable is required")
 
 WEBHOOK_PATH = f"/webhook/{BOT_TOKEN}"
-WEBHOOK_URL = f"{BASE_URL}{WEBHOOK_PATH}" if BASE_URL else None
+WEBHOOK_URL = f"https://{BASE_URL}{WEBHOOK_PATH}" if BASE_URL else None  # תמיד עם https://
 
 logger.info(f"Main application module loaded for bot: {BOT_USERNAME}")
 
