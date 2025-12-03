@@ -119,7 +119,7 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.message and update.message.text:
         text = update.message.text.strip().lower()
-        if text in ["start", "/start"]:  # תגובה גם ל-START וגם ל-/Start
+        if text in ["start", "/start", "התחל"]:
             await start_command(update, context)
             return
         await update.message.reply_text(
@@ -132,8 +132,6 @@ application.add_handler(CommandHandler("status", status_command))
 application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
 # --- Lifespan Events ---
-from contextlib import asynccontextmanager
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("FastAPI application starting up...")
